@@ -1,0 +1,47 @@
+name: Fork Sync
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "0 16 * * *"  # 每天午夜执行（UTC 时间）
+  workflow_dispatch:       # 允许手动触发
+
+jobs:
+  sync_with_upstream:
+    name: Sync with Upstream
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.fork }}
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0   # 保证完整历史记录
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/vernesong/OpenClash.git
+          git fetch upstream
+
+      - name: Sync master branch
+        run: |
+          if git show-ref --quiet refs/heads/master; then
+            git checkout master
+          else
+            git checkout -b master
+          fi
+          git reset --hard upstream/master
+          git push origin master --force
+
+      - name: Sync dev branch
+        run: |
+          if git show-ref --quiet refs/heads/dev; then
+            git checkout dev
+          else
+            git checkout -b dev
+          fi
+          git reset --hard upstream/dev
+          git push origin dev --force
